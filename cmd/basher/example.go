@@ -44,25 +44,26 @@ func createPowerShell() ps.Shell {
 	return shell
 }
 
-// Example command I need to test
-func ConfigureIPAddress(success chan bool) {
-	ipAddress := "10.0.75.128"
-	machineName := "minishift"
-	
-	setKVPForIpAddress := `
+
+func prepareKeyValuePair(machineName string, key string, value string) string {
+	return `
 $vmMgmt = Get-WmiObject -Namespace root\virtualization\v2 -Class Msvm_VirtualSystemManagementService
 $vm = Get-WmiObject -Namespace root\virtualization\v2 -Class Msvm_ComputerSystem -Filter {` + fmt.Sprintf("ElementName = '%s'", machineName) + `}
 $kvpDataItem = ([WMIClass][String]::Format("\\{0}\{1}:{2}", $VmMgmt.ClassPath.Server, $VmMgmt.ClassPath.NamespacePath, "Msvm_KvpExchangeDataItem")).CreateInstance()
-$kvpDataItem.Name = 'IpAddress'
-` + fmt.Sprintf("$kvpDataItem.Data = '%s'", ipAddress) + `
+` + fmt.Sprintf("$kvpDataItem.Name = '%s'", key) + `
+` + fmt.Sprintf("$kvpDataItem.Data = '%s'", value) + `
 $kvpDataItem.Source = 0
 $vmMgmt.RemoveKvpItems($vm, $kvpDataItem.PSBase.GetText(1))
 $result = $vmMgmt.AddKvpItems($vm, $kvpDataItem.PSBase.GetText(1))
 $result.ReturnValue
 	`
+}
 
-	posh := New() // createa a new instance?!
+// Example command I need to test
+func ConfigureIPAddress(success chan bool) {
+	setKVPForIpAddress := prepareKeyValuePair("minishift", "IpAddress", "10.0.75.128")
 
+	posh := New()
 	result, _ := posh.Execute(setKVPForIpAddress)
 	
 	if (strings.Contains(result, "4096")) {
