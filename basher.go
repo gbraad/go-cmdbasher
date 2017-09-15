@@ -21,7 +21,8 @@ import (
 	"time"
 )
 
-const DefaultInterval = 2 * time.Second
+const DefaultInterval = time.Second
+
 type bashingFunc func(handler chan bool)
 
 type Basher struct {
@@ -44,14 +45,13 @@ func (b *Basher) Start() {
 	go func() {
 		for {
 			select {
-			case <- b.handler:
+			case <-b.handler:
 				return
 			default:
 				fmt.Print(".")
+				b.bashing(b.handler)
 				time.Sleep(b.interval)
 			}
-						
-			//b.bashing(b.handler)
 		}
 	}()
 }

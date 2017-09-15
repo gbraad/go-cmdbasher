@@ -18,6 +18,7 @@ package main
 
 import (
     "fmt"
+    "strings"
     
 	ps "github.com/gorillalabs/go-powershell"
 	"github.com/gorillalabs/go-powershell/backend"
@@ -49,13 +50,11 @@ func ConfigureIPAddress(success chan bool) {
 	machineName := "minishift"
 	
 	setKVPForIpAddress := `
-$vmMgmt = Get-WmiObject -Namespace root\virtualization\v2 -Class Msvm_VirtualSystemManagementService  
-$vm = Get-WmiObject -Namespace root\virtualization\v2 -Class Msvm_ComputerSystem -Filter {` + 
-		fmt.Sprintf("ElementName = '%s'", machineName) + `
-}
+$vmMgmt = Get-WmiObject -Namespace root\virtualization\v2 -Class Msvm_VirtualSystemManagementService
+$vm = Get-WmiObject -Namespace root\virtualization\v2 -Class Msvm_ComputerSystem -Filter {` + fmt.Sprintf("ElementName = '%s'", machineName) + `}
 $kvpDataItem = ([WMIClass][String]::Format("\\{0}\{1}:{2}", $VmMgmt.ClassPath.Server, $VmMgmt.ClassPath.NamespacePath, "Msvm_KvpExchangeDataItem")).CreateInstance()
-$kvpDataItem.Name = "IpAddress"` +
-		fmt.Sprintf("$kvpDataItem.Data = '%s'", ipAddress) + `
+$kvpDataItem.Name = 'IpAddress'
+` + fmt.Sprintf("$kvpDataItem.Data = '%s'", ipAddress) + `
 $kvpDataItem.Source = 0
 $vmMgmt.RemoveKvpItems($vm, $kvpDataItem.PSBase.GetText(1))
 $result = $vmMgmt.AddKvpItems($vm, $kvpDataItem.PSBase.GetText(1))
@@ -63,8 +62,10 @@ $result.ReturnValue
 	`
 
 	posh := New() // createa a new instance?!
-	stdOut, _ := posh.Execute(setKVPForIpAddress)
-	//posh.Exit()
+
+	result, _ := posh.Execute(setKVPForIpAddress)
 	
-	success <- (stdOut == "4096")
+	if (strings.Contains(result, "4096")) {
+		success <- true
+	}
 }
